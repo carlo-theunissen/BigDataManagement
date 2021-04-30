@@ -4,7 +4,15 @@ findspark.init()
 
 from pyspark.sql import SparkSession
 
-logFile = r'C:\Users\20180180\Downloads\sparkflight\airline.csv'  # Should be some file on your system
+from configparser import ConfigParser
+config = ConfigParser()
+config.read('../config.ini')
+path_to_csv = config.get('main', 'csv')
+
+# path_to_csv = "/mnt/c/Users/twanv/flight_data/airline.csv"
+
+
+logFile = path_to_csv  # Should be some file on your system
 spark = SparkSession.builder \
     .config("spark.driver.memory", "15g") \
     .appName("SparkFlight").getOrCreate()
