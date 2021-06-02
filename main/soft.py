@@ -69,13 +69,12 @@ def rem_rhs_value_from_key(rdd_row):
 
 def find_SDs(output_file, spark, dataframe, max_lhs_size = 3, perc_threshold = 0.7, found_FDs = []):
     col_names = utils.get_col_names(dataframe)
-    found_soft_dep = found_FDs
+    found_soft_dep = []
 
     for lhs_size in range(1, max_lhs_size + 1):
         tic = time.perf_counter()
 
-        candidate_SDs = utils.generate_deps(col_names, col_names, lhs_size, found_soft_dep)
-        candidate_SDs = utils.filter_deps(candidate_SDs, found_FDs)
+        candidate_SDs = utils.generate_deps(col_names, col_names, lhs_size, found_FDs)
         #     broadcast the candidate fds only once to all nodes: http://spark.apache.org/docs/latest/rdd-programming-guide.html#broadcast-variables
         broadcast_candidate_FDs = spark.sparkContext.broadcast(candidate_SDs)
         
@@ -125,8 +124,5 @@ def find_SDs(output_file, spark, dataframe, max_lhs_size = 3, perc_threshold = 0
         toc = time.perf_counter()
         output_file.write(f"Discovering SDs took {toc - tic:0.4f} seconds\n")
         output_file.write(f'Number of dependencies found: {len(found_soft_dep)}\n')
-        output_file.write('found soft dependencies:\n')
-        output_file.write(found_soft_dep)
-        output_file.write('\n')
     
     return found_soft_dep

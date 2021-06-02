@@ -9,7 +9,8 @@ from datetime import datetime
 
 # connect to spark and read data
 spark = SparkSession.builder.getOrCreate()
-df = spark.read.csv('data.csv', header=True, inferSchema=True, mode='PERMISSIVE', encoding='ISO-8859-1')
+# df = spark.read.csv('data.csv', header=True, inferSchema=True, mode='PERMISSIVE', encoding='ISO-8859-1')
+df = spark.read.csv('preprocessed_data.csv', header=True, inferSchema=True, mode='PERMISSIVE', encoding='ISO-8859-1')
 
 
 
@@ -83,8 +84,8 @@ if alg == 0:
     print('TODO')
 elif alg == 1:
     # (hard) functoinal dependencies
-    found_FDs = hard.find_FDs(output_file, spark, df, lhs_sizes=[1,2,3], sample_rates=[0.1], col_limit=col_limit)
-    found_FDs = []
+    sample_rates = [0.0001, 0.001, 0.005, 0.015, 0.03, 0.1, 0.3]
+    found_FDs = hard.find_FDs(output_file, spark, df, lhs_sizes=[1,2,3], sample_rates=sample_rates, col_limit=col_limit)
     utils.write_dependencies('./found_deps/fds.json', found_FDs)
 elif alg == 2:
     # delta dependencies
@@ -92,7 +93,6 @@ elif alg == 2:
 elif alg == 3:
     # soft functional dependencies
     found_SDs = soft.find_SDs(output_file, spark, df, max_lhs_size=3, perc_threshold=tau, found_FDs=found_FDs)
-    found_SDs = []
     utils.write_dependencies('./found_deps/sds.json', found_SDs)
 else:
     print('Not a valid algorithm specifier')
