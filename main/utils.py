@@ -4,12 +4,12 @@ from itertools import product, combinations
 
 
 # read found dependencies
-def read_dependencies(path: str) -> list(list(str)):
+def read_dependencies(path):
     with open(path, 'r') as f:
         return json.load(f)
 
 # write found dependencies
-def write_dependencies(path: str, deps: list(list(str))):
+def write_dependencies(path, deps):
     with open(path, 'w') as f:
         json.dump(deps, f)
 
@@ -43,3 +43,11 @@ def generate_deps(lhs_columns, rhs_columns, lhsSize: int, alreadyFound = []):
     deps = filter(lambda dep: not implied(dep), deps)
 
     return list(deps)
+
+
+
+def print_dependencies(dependencies):
+    for dep in sorted(dependencies):
+        lhs = dep[:-1]
+        rhs = dep[-1]
+        print(', '.join(lhs), '->', rhs)

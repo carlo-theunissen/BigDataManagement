@@ -1,15 +1,15 @@
 from pyspark.sql import SparkSession
 import sys
 import utils
-import hard
-# import cords, hard, delta, soft
-# from enum import Enums
+import hard, soft
+from datetime import datetime
+# TODO: import argparse
 
 
 
 # connect to spark and read data
-# spark = SparkSession.builder.getOrCreate()
-# df = spark.read.csv('data.csv', header=True, inferSchema=True, mode='PERMISSIVE', encoding='ISO-8859-1')
+spark = SparkSession.builder.getOrCreate()
+df = spark.read.csv('data.csv', header=True, inferSchema=True, mode='PERMISSIVE', encoding='ISO-8859-1')
 
 
 
@@ -19,7 +19,7 @@ if len(sys.argv) == 2 and sys.argv[1] == '-h':
     print('-h\t\t', 'You must already now this one ;)')
     print('-r [int]\t', 'Limit the number of dataset rows')
     print('-c [int]\t', 'Limit the numer of database columns')
-    print('-e [int]\t', 'Specifiy a desired error bound between 0 and 1 (default)')
+    print('-t [float]\t', 'Specify a desired soft dependency threshold tau between 0 and 1 (default 0.7)')
     print('-a [int]\t', 'Specifiy the algorithm to run')
     print('\t\t', '0: CORDS pre-filter')
     print('\t\t', '1: (hard) functional dependencies')
@@ -33,24 +33,24 @@ if len(sys.argv) == 2 and sys.argv[1] == '-h':
 
 
 # parse command line arguments
-rowLimit = -1
-colLimit = -1
-errorBound = 1
-alg = 1
+row_limit = -1
+col_limit = -1
+tau = 0.7
+alg = -1
 for i in range(1, len(sys.argv), 2):
     opt = sys.argv[i]
     arg = sys.argv[i+1]
     # limit rows
     if opt == '-r':
-        rowLimit = int(arg)
-        df = df.limit(rowLimit)
+        row_limit = int(arg)
+        df = df.limit(row_limit)
     # limit cols
     if opt == '-c':
-        colLimit = int(arg)
-    if opt == '-e':
-        errorBound = int(arg)
+        col_limit = int(arg)
     if opt == '-a':
-        alg = int(opt)
+        alg = int(arg)
+    if opt == '-f':
+        tau = int(arg)
 
 
 
@@ -58,8 +58,8 @@ for i in range(1, len(sys.argv), 2):
 deltas = dict()
 with open('deltas.txt') as f:
     for line in f.readlines():
-        columnName, delta = line.split(' ')
-        deltas[columnName] = int(delta)
+        col_name, delta = line.split(' ')
+        deltas[col_name] = int(delta)
 
 
 
@@ -71,19 +71,33 @@ found_SDs = utils.read_dependencies('./found_deps/sds.json')
 
 
 
+# open file for writing output
+output_file = open('output.txt', 'a')
+output_file.write(f'--- run {datetime.now().date()} {datetime.now().time()} ---\n')
+
+
+
 # run specified algorithm
 if alg == 0:
     # CORDS pre-filter
     print('TODO')
 elif alg == 1:
     # (hard) functoinal dependencies
-    found_FDs = hard.findFDs(df, lhsSizes=[1,2,3], sampleRates=[0.1], colLimit=colLimit)
-    utils.write_dependencies('./found_deps/fds.json')
+    found_FDs = hard.find_FDs(output_file, spark, df, lhs_sizes=[1,2,3], sample_rates=[0.1], col_limit=col_limit)
+    found_FDs = []
+    utils.write_dependencies('./found_deps/fds.json', found_FDs)
 elif alg == 2:
     # delta dependencies
     print('TODO')
 elif alg == 3:
     # soft functional dependencies
-    print('TODO')
+    found_SDs = soft.find_SDs(output_file, spark, df, max_lhs_size=3, perc_threshold=tau, found_FDs=found_FDs)
+    found_SDs = []
+    utils.write_dependencies('./found_deps/sds.json', found_SDs)
 else:
     print('Not a valid algorithm specifier')
+
+
+
+# close output file
+output_file.close()
