@@ -13,9 +13,13 @@ def get_flat_map(lhs_size, bv_candidate_FDs):
 
 
 
-def sample_FDs(dataframe, bv_candidate_FDs, lhs_size, sample_rate):
+def sample_FDs(dataframe, bv_candidate_FDs, lhs_size, sample_rate):  
     if(len(bv_candidate_FDs.value) == 0):
-        return bv_candidate_FDs
+        return bv_candidate_FDs.value
+
+    # <= 10 possible fd's is cheap enough to just run directly possibly saving multiple rounds of sampling
+    if(len(bv_candidate_FDs.value) <= 10 and sample_rate != 1.0):
+        return bv_candidate_FDs.value
     
     rdd = dataframe.rdd
     sample = rdd.sample(False, sample_rate)
@@ -36,22 +40,26 @@ validate_FDs = lambda dataframe, bv_candidate_FDs, lhs_size: sample_FDs(datafram
 # TODO: use batching?
 def find_FDs(output_file, spark, dataframe, lhs_sizes, sample_rates, col_limit = -1):
     col_names = utils.get_col_names(dataframe)
-    col_names =  col_names if col_limit == -1 else col_names[:col_limit]
+    col_names = col_names if col_limit == -1 else col_names[:col_limit]
 
     found_FDs = []
     for lhs_size in lhs_sizes:
-        candidate_FDs = utils.generate_deps(col_names, col_names, lhs_size, found_FDs)
+        print(f'Starting {lhs_size}')
+        candidate_FDs = utils.generate_deps(col_names, col_names, lhs_size, [cfd for result in found_FDs for cfd in result])
         bv_candidate_FDs = spark.sparkContext.broadcast(candidate_FDs)
 
         for sample_rate in sample_rates:
             output_file.write(f'Running sampling rate {sample_rate} over {len(candidate_FDs)} candidate FDs\n')
+            print(f'Running sampling rate {sample_rate} over {len(candidate_FDs)} candidate FDs\n')
             tic = time.perf_counter()
 
             # find and keep only the remaining candidate_FDs
             candidate_FDs = sample_FDs(dataframe, bv_candidate_FDs, lhs_size, sample_rate)
+            bv_candidate_FDs = spark.sparkContext.broadcast(candidate_FDs)
 
             toc = time.perf_counter()
             output_file.write(f'Sampling took {toc - tic :0.4f} seconds\n')
+            print(f'Sampling took {toc - tic :0.4f} seconds\n')
         
         validated_FDs = validate_FDs(dataframe, bv_candidate_FDs, lhs_size)
         found_FDs.append(validated_FDs)

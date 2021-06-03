@@ -25,7 +25,7 @@ filter_deps = lambda candidateDeps, found_deps: list(filter(lambda dep: not dep 
 
 
 
-def generate_deps(lhs_columns, rhs_columns, lhsSize: int, alreadyFound = []):
+def generate_deps(lhs_columns, rhs_columns, lhsSize: int, alreadyFound):
     # generate left hand sides
     lhss = combinations(lhs_columns, r=lhsSize)
     # add right hand sides
