@@ -46,11 +46,11 @@ def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, col
 
     found_DDs = []
     for lhs_size in lhs_sizes:
-        candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, found_DDs)
+        candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, [cdd for result in found_DDs for cdd in result])
         bv_candidate_DDs = spark.sparkContext.broadcast(candidate_DDs)
 
         for sample_rate in sample_rates:
-            print(f'DD: Running sampele rate {sample_rate} over {len(candidate_DDs)} candidate DDs\n')
+            output_file.write(f'DD: Running sampele rate {sample_rate} over {len(candidate_DDs)} candidate DDs\n')
             tic = time.perf_counter()
 
             # find and keep only the remaining candidate_DDs
@@ -58,9 +58,10 @@ def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, col
             bv_candidate_DDs = spark.sparkContext.broadcast(candidate_DDs)
 
             toc = time.perf_counter()
-            print(f'DD: Sampling took {toc - tic :0.4f} seconds')
+            output_file.write(f'DD: Sampling took {toc - tic :0.4f} seconds\n')
         
         validated_DDs = validate_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size)
+        print(validate_DDs)
         found_DDs.append(validated_DDs)
     
     return found_DDs
