@@ -5,6 +5,7 @@ import utils
 
 
 
+# TODO: check lhs_size
 def gen_contin_cells(x, bv_candidate_FDs, lhs_size):
     combs = []
     candidate_FDs = [tuple(candidate_FD) for candidate_FD in bv_candidate_FDs.value]
