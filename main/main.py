@@ -1,8 +1,8 @@
 from pyspark.sql import SparkSession
 import sys
 import utils
-import hard, soft, cords
-from datetime import datetime
+import hard, soft, cords, deltad
+from datetime import datetime, timedelta
 import argparse
 
 
@@ -70,9 +70,13 @@ for i in range(1, len(sys.argv), 2):
 # load user-specified delta limits
 deltas = dict()
 with open('deltas.txt') as f:
+    dtypes = dict(df.dtypes)
     for line in f.readlines():
         col_name, delta = line.split(' ')
-        deltas[col_name] = int(delta)
+        if dtypes[col_name] == 'timestamp':
+            deltas[col_name] = timedelta(minutes=int(delta))
+        else:
+            deltas[col_name] = int(delta)
 
 
 
@@ -101,7 +105,9 @@ elif alg == 1:
     utils.write_dependencies('./found_deps/fds.json', found_FDs)
 elif alg == 2:
     # delta dependencies
-    print('TODO')
+    sample_rates = [0.0001, 0.001, 0.005, 0.015, 0.03, 0.1, 0.3]
+    found_DDs = deltad.find_DDs(output_file, spark, df, deltas, lhs_sizes=[1,2,3], sample_rates=sample_rates, col_limit=col_limit)
+    utils.write_dependencies('./found_deps/dds.json', found_DDs)
 elif alg == 3:
     # soft functional dependencies
     cords_output = utils.read_dependencies('./found_deps/cords.json')

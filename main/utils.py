@@ -21,6 +21,9 @@ get_col_names = lambda dataframe: list(map(get_dtype_name, dataframe.dtypes))
 is_numeric_dtype = lambda dtype: dtype[1] == 'int'
 get_numeric_col_names = lambda dataframe: list(map(get_dtype_name, filter(is_numeric_dtype, dataframe.dtypes)))
 
+is_timestamp_dtype = lambda dtype: dtype[1] == 'timestamp'
+get_timestamp_col_names = lambda dataframe: list(map(get_dtype_name, filter(is_timestamp_dtype, dataframe.dtypes)))
+
 filter_deps = lambda candidateDeps, found_deps: list(filter(lambda dep: not dep in found_deps, candidateDeps))
 
 
