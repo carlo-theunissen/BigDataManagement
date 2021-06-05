@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 import sys
 import utils
-import hard, soft, cords, deltad
+import hard, soft, deltad
 from datetime import datetime, timedelta
 import argparse
 
@@ -97,7 +97,8 @@ output_file.write(f'--- run {datetime.now().date()} {datetime.now().time()} ---\
 # run specified algorithm
 if alg == 0:
     # CORDS pre-filter
-    cords.run_CORDS(output_file, spark, df, tau)
+    #cords.run_CORDS(output_file, spark, df, tau)
+    print('cord commented out')
 elif alg == 1:
     # (hard) functoinal dependencies
     sample_rates = [0.0001, 0.001, 0.005, 0.015, 0.03, 0.1, 0.3]
@@ -106,7 +107,7 @@ elif alg == 1:
 elif alg == 2:
     # delta dependencies
     sample_rates = [0.0001, 0.001, 0.005, 0.015, 0.03, 0.1, 0.3]
-    found_DDs = deltad.find_DDs(output_file, spark, df, deltas, lhs_sizes=[1,2,3], sample_rates=sample_rates, col_limit=col_limit)
+    found_DDs = deltad.find_DDs(output_file, spark, df, deltas, lhs_sizes=[1,2,3], sample_rates=sample_rates, found_FDS=found_FDs, col_limit=col_limit)
     utils.write_dependencies('./found_deps/dds.json', found_DDs)
 elif alg == 3:
     # soft functional dependencies

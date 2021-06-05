@@ -45,7 +45,7 @@ def find_FDs(output_file, spark, dataframe, lhs_sizes, sample_rates, col_limit =
     found_FDs = []
     for lhs_size in lhs_sizes:
         print(f'Starting {lhs_size}')
-        candidate_FDs = utils.generate_deps(col_names, col_names, lhs_size, [cfd for result in found_FDs for cfd in result])
+        candidate_FDs = utils.generate_deps(col_names, col_names, lhs_size, found_FDs)
         bv_candidate_FDs = spark.sparkContext.broadcast(candidate_FDs)
         tic1 = time.perf_counter()
 
@@ -63,7 +63,7 @@ def find_FDs(output_file, spark, dataframe, lhs_sizes, sample_rates, col_limit =
             print(f'Sampling took {toc - tic :0.4f} seconds\n')
         
         validated_FDs = validate_FDs(dataframe, bv_candidate_FDs, lhs_size)
-        found_FDs.append(validated_FDs)
+        found_FDs += validated_FDs
 
         toc1 = time.perf_counter()
         output_file.write(f'FD: Finished lhs= {lhs_size} in {toc1 - tic1 :0.4f} seconds\n')
