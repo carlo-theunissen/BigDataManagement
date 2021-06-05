@@ -1,1 +1,19 @@
-[]
+[ 
+  [ "ActualElapsedTime", "Distance", "CRSElapsedTime" ],
+  [ "DepDelay", "Distance" ],
+  [ "CRSElapsedTime", "Distance" ],
+  [ "AirTime", "Distance" ],
+  [ "ArrDelay", "Distance" ],
+  [ "ActualElapsedTime", "Distance" ],
+  [ "NASAndWeatherDelay", "Distance" ],
+  [ "Origin", "Distance" ],
+  [ "LateAircraftAndCarrierDelay", "Distance" ],
+  [ "Dest", "Distance" ],
+  [ "ActualElapsedTime", "ArrDelay", "DepDelay", "CRSElapsedTime" ],
+  [ "ActualElapsedTime", "AirTime", "Origin", "CRSElapsedTime" ],
+  [ "ArrDelay", "CRSElapsedTime", "DepDelay", "ActualElapsedTime" ],
+  [ "ActualElapsedTime", "CRSElapsedTime", "DepDelay", "ArrDelay" ],
+  [ "ActualElapsedTime", "ArrDelay", "Origin", "CRSElapsedTime" ],
+  [ "ActualElapsedTime", "Dest", "Origin", "CRSElapsedTime" ],
+  [ "ActualElapsedTime", "DepDelay", "Distance", "ArrDelay" ]
+]

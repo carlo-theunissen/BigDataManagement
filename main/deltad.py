@@ -18,7 +18,10 @@ def sample_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size, sample_rate):
     #Benchmark purpose
     #if(sample_rate == 1.0):
     #    return bv_candidate_DDs.value
-    
+
+    if(len(bv_candidate_DDs.value) <= 10 and sample_rate != 1.0):
+        return bv_candidate_DDs.value
+
     rdd = dataframe.rdd
     sampled = rdd.sample(False, sample_rate)
     mapped_DDs = sampled.flatMap(get_flat_map(lhs_size, bv_candidate_DDs, bv_deltas))
@@ -45,9 +48,9 @@ def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, fou
     bv_deltas = spark.sparkContext.broadcast(deltas)
 
     found_DDs = []
-    found_DDs += found_FDS
     for lhs_size in lhs_sizes:
-        candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, found_DDs)
+        ignoredDDS = found_FDS + found_DDs
+        candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, ignoredDDS)
         bv_candidate_DDs = spark.sparkContext.broadcast(candidate_DDs)
 
         for sample_rate in sample_rates:
@@ -67,5 +70,4 @@ def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, fou
         print(list(validated_DDs))
         found_DDs += validated_DDs
     
-    found_DDs -= found_FDS
     return found_DDs
