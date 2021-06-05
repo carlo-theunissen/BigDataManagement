@@ -38,9 +38,9 @@ validate_FDs = lambda dataframe, bv_candidate_FDs, lhs_size: sample_FDs(datafram
 
 
 # TODO: use batching?
-def find_FDs(output_file, spark, dataframe, lhs_sizes, sample_rates, col_limit = -1):
+def find_FDs(output_file, spark, dataframe, lhs_sizes, sample_rates, col_limit = None):
     col_names = utils.get_col_names(dataframe)
-    col_names = col_names if col_limit == -1 else col_names[:col_limit]
+    col_names = col_names if col_limit == None else col_names[:col_limit]
 
     found_FDs = []
     for lhs_size in lhs_sizes:

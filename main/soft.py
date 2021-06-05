@@ -6,9 +6,9 @@ import utils
 
 
 # TODO: check lhs_size
-def gen_contin_cells(x, bv_candidate_FDs, lhs_size):
+def gen_contin_cells(x, bv_candidate_SDs):
     combs = []
-    candidate_FDs = [tuple(candidate_FD) for candidate_FD in bv_candidate_FDs.value]
+    candidate_FDs = [tuple(candidate_FD) for candidate_FD in bv_candidate_SDs.value]
     #     for comb in candidate_FDs:
     for i, fd in enumerate(candidate_FDs):
     # rows in form: (((lhs, rhs), (value(s) lhs, value rhs)), count)
@@ -68,23 +68,34 @@ def rem_rhs_value_from_key(rdd_row):
 
 
 
-def find_SDs(output_file, spark, dataframe, max_lhs_size = 3, perc_threshold = 0.7, found_FDs = []):
+def find_SDs(output_file, spark, dataframe, max_lhs_size = 3, perc_threshold = 0.7, found_FDs = [], use_CORDS = False, col_limit = None):
     col_names = utils.get_col_names(dataframe)
-    found_soft_dep = []
+    col_names = col_names if col_limit == None else col_names[:col_limit]
 
+    cords = utils.read_dependencies('./found_deps/cords.json')
+
+    found_SDs = []
     for lhs_size in range(1, max_lhs_size + 1):
+        # get and broadcast dependencies for current LHS size
+        # http://spark.apache.org/docs/latest/rdd-programming-guide.html#broadcast-variables
+        candidate_SDs = []
+        if use_CORDS:
+            candidate_SDs = cords[f'to_check_sfd{lhs_size}']
+        else:
+            ignored_SDs = found_FDs + found_SDs
+            candidate_SDs = utils.generate_deps(col_names, col_names, lhs_size, ignored_SDs)
+        broadcast_candidate_SDs = spark.sparkContext.broadcast(candidate_SDs)
+
         tic = time.perf_counter()
 
         candidate_SDs = utils.generate_deps(col_names, col_names, lhs_size, found_FDs)
-        #     broadcast the candidate fds only once to all nodes: http://spark.apache.org/docs/latest/rdd-programming-guide.html#broadcast-variables
-        broadcast_candidate_FDs = spark.sparkContext.broadcast(candidate_SDs)
         
         output_file.write(f"Running full dataset over {len(candidate_SDs)} possible Soft Dependencies with threshold: {perc_threshold} and lhs: {lhs_size}\n")
         # #    sample only for local use to test
         #     flat_columns = cont_sample_data.rdd.flatMap(lambda x: gen_contin_cells(x, broadcast_candidate_FDs, lhs_size=i)) # 1
 
         #     create all column combs per row
-        flat_columns = dataframe.rdd.flatMap(lambda x: gen_contin_cells(x, broadcast_candidate_FDs, lhs_size=lhs_size)) # 1
+        flat_columns = dataframe.rdd.flatMap(lambda x: gen_contin_cells(x, broadcast_candidate_SDs)) # 1
         #     cache or not?? only used one time extra this rdd later? check if this actually wins time
         c_flat_columns = flat_columns.reduceByKey(lambda x,y: x+y).cache() # 2
         #     unique lhs + rhs rows are not needed to calculate possible combinations of 2 rows with equal lhs.
@@ -117,13 +128,13 @@ def find_SDs(output_file, spark, dataframe, max_lhs_size = 3, perc_threshold = 0
         
         filter_threshold_fds = means_percentages.filter(lambda x: x[1] >= perc_threshold)
         #     take only fd index and map index to full fd
-        take_only_fd_indic = filter_threshold_fds.map(lambda x: broadcast_candidate_FDs.value[x[0]])
+        take_only_fd_indic = filter_threshold_fds.map(lambda x: broadcast_candidate_SDs.value[x[0]])
         soft_fd_comb_list = take_only_fd_indic.collect()
         #     form: [["lhs column", "lhs column", "rhs column"], ....] depending on value of i in loop for amount of lhs columns
-        found_soft_dep += soft_fd_comb_list
+        found_SDs += soft_fd_comb_list
         
         toc = time.perf_counter()
         output_file.write(f"Discovering SDs took {toc - tic:0.4f} seconds\n")
-        output_file.write(f'Number of dependencies found: {len(found_soft_dep)}\n')
+        output_file.write(f'Number of dependencies found: {len(found_SDs)}\n')
     
-    return found_soft_dep
+    return found_SDs

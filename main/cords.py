@@ -90,7 +90,6 @@ def find_correlected_dependencies_with_spark(spark, dependencies_to_check, trans
 
 
 
-# TODO: col_limit
 def run_CORDS(output_file, spark, dataframe, tau):
     # --- STEP 1 ---
 

@@ -39,20 +39,28 @@ def sample_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size, sample_rate):
 validate_DDs = lambda dataframe, candidate_DDs, bv_deltas, lhs_size: sample_DDs(dataframe, candidate_DDs, bv_deltas, lhs_size, sample_rate=1.0)
 
 
-def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, found_FDS, col_limit = -1):
+def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, found_FDs, use_CORDS = False, col_limit = None):
     lhs_cols = utils.get_col_names(dataframe)
-    lhs_cols =  lhs_cols if col_limit == -1 else lhs_cols[:col_limit]
+    lhs_cols =  lhs_cols if col_limit == None else lhs_cols[:col_limit]
     rhs_cols = utils.get_numeric_col_names(dataframe) + utils.get_timestamp_col_names(dataframe)
-    rhs_cols = rhs_cols if col_limit == -1 else rhs_cols[:col_limit]
+    rhs_cols = rhs_cols if col_limit == None else rhs_cols[:col_limit]
     
     bv_deltas = spark.sparkContext.broadcast(deltas)
 
+    cords = utils.read_dependencies('./found_deps/cords.json')
+
     found_DDs = []
     for lhs_size in lhs_sizes:
-        ignoredDDS = found_FDS + found_DDs
-        candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, ignoredDDS)
+        # get and broadcast dependencies for current LHS size
+        candidate_DDs = []
+        if use_CORDS:
+            candidate_DDs = cords[f'to_check_delta{lhs_size}']
+        else:
+            ignored_DDs = found_FDs + found_DDs
+            candidate_DDs = utils.generate_deps(lhs_cols, rhs_cols, lhs_size, ignored_DDs)
         bv_candidate_DDs = spark.sparkContext.broadcast(candidate_DDs)
 
+        # apply progressive sampling
         for sample_rate in sample_rates:
             output_file.write(f'DD: Running sampele rate {sample_rate} over {len(candidate_DDs)} candidate DDs\n')
             print(f'DD: Running sampele rate {sample_rate} over {len(candidate_DDs)} candidate DDs\n')
@@ -66,6 +74,7 @@ def find_DDs(output_file, spark, dataframe, deltas, lhs_sizes, sample_rates, fou
             output_file.write(f'DD: Sampling took {toc - tic :0.4f} seconds\n')
             print(f'DD: Sampling took {toc - tic :0.4f} seconds\n')
         
+        # validate remaining candidate DDs
         validated_DDs = validate_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size)
         print(list(validated_DDs))
         found_DDs += validated_DDs
