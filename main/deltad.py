@@ -2,13 +2,13 @@ import utils
 import time
 
 
-def get_flat_map(lhs_size, bv_candidate_DDs, bv_deltas):
+def get_flat_map(lhs_size, bv_candidate_DDs):
     if(lhs_size == 1):
-        return lambda row: [((i, bv_deltas.value[dd[1]], row[dd[0]]), (row[dd[1]], row[dd[1]])) for i, dd in enumerate(bv_candidate_DDs.value)]
+        return lambda row: [((i, row[dd[0]]), (row[dd[1]], row[dd[1]])) for i, dd in enumerate(bv_candidate_DDs.value)]
     if(lhs_size == 2):
-        return lambda row: [((i, bv_deltas.value[dd[2]], row[dd[0]], row[dd[1]]), (row[dd[2]], row[dd[2]])) for i, dd in enumerate(bv_candidate_DDs.value)]
+        return lambda row: [((i, row[dd[0]], row[dd[1]]), (row[dd[2]], row[dd[2]])) for i, dd in enumerate(bv_candidate_DDs.value)]
     if(lhs_size == 3):
-        return lambda row: [((i, bv_deltas.value[dd[3]], row[dd[0]], row[dd[1]], row[dd[2]]), (row[dd[3]], row[dd[3]])) for i, dd in enumerate(bv_candidate_DDs.value)]
+        return lambda row: [((i, row[dd[0]], row[dd[1]], row[dd[2]]), (row[dd[3]], row[dd[3]])) for i, dd in enumerate(bv_candidate_DDs.value)]
 
 
 def sample_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size, sample_rate):
@@ -24,9 +24,9 @@ def sample_DDs(dataframe, bv_candidate_DDs, bv_deltas, lhs_size, sample_rate):
 
     rdd = dataframe.rdd
     sampled = rdd.sample(False, sample_rate)
-    mapped_DDs = sampled.flatMap(get_flat_map(lhs_size, bv_candidate_DDs, bv_deltas))
+    mapped_DDs = sampled.flatMap(get_flat_map(lhs_size, bv_candidate_DDs))
     grouped = mapped_DDs.reduceByKey(lambda x, y: (max(x[0], y[0]), min(x[1], y[1])))
-    filtered1 = grouped.map(lambda x: (x[0][0], (x[1][0] - x[1][1]) < x[0][1]))
+    filtered1 = grouped.map(lambda x: (x[0][0], (x[1][0] - x[1][1]) < bv_deltas.value[ bv_candidate_DDs.value[x[0][0]][-1] ]))
     #data_stripped = filtered1.map(lambda x: (x[0][0], x[1]))
     grouped_by_dd = filtered1.reduceByKey(lambda x, y: x and y)
     filtered2 = grouped_by_dd.filter(lambda x: x[1])
